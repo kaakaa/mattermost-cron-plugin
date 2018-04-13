@@ -66,6 +66,8 @@ func (p *CronPlugin) ExecuteCommand(args *model.CommandArgs) (*model.CommandResp
 }
 
 func parse(text string) (*JobCommand, error) {
+	// TODO: Should we reject jobs per seconds becauseof its heavy resource
+	// https://godoc.org/github.com/robfig/cron#Parser
 	re := regexp.MustCompile(`/cron (add) ([^"¥s]+) "(.+)"`)
 	if !re.MatchString(text) {
 		return nil, fmt.Errorf("Cannot parse command text: %s", text)
