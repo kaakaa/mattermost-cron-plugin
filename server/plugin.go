@@ -45,16 +45,17 @@ func (p *CronPlugin) OnDeactivate() error {
 
 // /cron add * * * * * * Test
 func (p *CronPlugin) ExecuteCommand(args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
-	jc, err := parse(args.Command)
+	jc, err := parseCommand(args)
 	if err != nil {
 		return &model.CommandResponse {
 			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 			Text: fmt.Sprintf("Cannot control cron job: %v", err),
 		}, nil
 	}
+
 	post := model.Post{
-		UserId: args.UserId,
-		ChannelId: args.ChannelId, 
+		UserId: jc.UserID,
+		ChannelId: jc.ChannelID,
 		Message: jc.Text,
 	}
 	if err = p.cron.AddFunc(jc.Schedule, func(){ p.api.CreatePost(&post)}); err != nil {
@@ -69,26 +70,37 @@ func (p *CronPlugin) ExecuteCommand(args *model.CommandArgs) (*model.CommandResp
 	}, nil
 }
 
-func parse(text string) (*JobCommand, error) {
+func parseCommand(args *model.CommandArgs) (*JobCommand, error) {
+	s, err := parseText(args.Command)
+	if err != nil {
+		return nil, err
+	}
+	return &JobCommand{
+		ID: Generator.getID(),
+		UserID: args.UserId,
+		ChannelID: args.ChannelId,
+		Schedule: s[2],
+		Text: s[3],
+	}, nil
+}
+
+func parseText(text string) ([]string, error) {
 	// TODO: Should we reject jobs per seconds becauseof its heavy resource
 	// https://godoc.org/github.com/robfig/cron#Parser
 	re := regexp.MustCompile(`/cron (add) ([^"¥s]+) "(.+)"`)
 	if !re.MatchString(text) {
-		return nil, fmt.Errorf("Cannot parse command text: %s", text)
+		return []string{}, fmt.Errorf("Cannot parse command text: %s", text)
 	}
 	s :=  re.FindAllStringSubmatch(text, -1)[0]
 
-	return &JobCommand{
-		ID: Generator.getID(),
-		Command: s[1],
-		Schedule: s[2],
-		Text: s[3],
-	 }, nil
+	return s, nil
 }
 
+// TODO: Add user_id, channel_id, created_id fields
 type JobCommand struct {
 	ID string
-	Command string
+	UserID string
+	ChannelID string
 	Schedule string
 	Text string
 }
