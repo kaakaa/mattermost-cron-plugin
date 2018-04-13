@@ -10,9 +10,12 @@ import (
 	"github.com/robfig/cron"
 )
 
+var Generator IDGenerator = &RandomGenerator{}
+
 type CronPlugin struct{
 	api		plugin.API
 	cron	*cron.Cron
+	keyValue plugin.KeyValueStore
 }
 
 
@@ -26,6 +29,7 @@ func (p *CronPlugin) OnActivate(api plugin.API) error {
 	p.cron.Start()
 
 	p.api = api
+	p.keyValue = p.api.KeyValueStore()
 	return p.api.RegisterCommand(&model.Command{
 		Trigger:	`cron`,
 		AutoComplete: true,
@@ -75,6 +79,7 @@ func parse(text string) (*JobCommand, error) {
 	s :=  re.FindAllStringSubmatch(text, -1)[0]
 
 	return &JobCommand{
+		ID: Generator.getID(),
 		Command: s[1],
 		Schedule: s[2],
 		Text: s[3],
@@ -82,6 +87,7 @@ func parse(text string) (*JobCommand, error) {
 }
 
 type JobCommand struct {
+	ID string
 	Command string
 	Schedule string
 	Text string

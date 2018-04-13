@@ -6,8 +6,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const TestJobID = "TESTID0001"
+type TestIDGenerator struct{}
+func (g *TestIDGenerator) getID() string {
+	return TestJobID
+}
+
 func TestParse(t *testing.T) {
 	assert := assert.New(t)
+
+	Generator = &TestIDGenerator{}
 
 	for name, tc := range map[string]struct {
 		Input string
@@ -16,17 +24,17 @@ func TestParse(t *testing.T) {
 	}{
 		"Add cron job": {
 			Input: `/cron add * * * * * * "Input Text"`,
-			Output: &JobCommand{Command:"add", Schedule:"* * * * * *", Text:"Input Text"},
+			Output: &JobCommand{ID: TestJobID, Command:"add", Schedule:"* * * * * *", Text:"Input Text"},
 			Error: nil,
 		},
 		"Add cron job per 5 seconds": {
 			Input: `/cron add */5 * * * * * "Input Text"`,
-			Output: &JobCommand{Command:"add", Schedule:"*/5 * * * * *", Text:"Input Text"},
+			Output: &JobCommand{ID: TestJobID, Command:"add", Schedule:"*/5 * * * * *", Text:"Input Text"},
 			Error: nil,
 		},
 		"Add cron job every 9:30:00 on Sunday": {
 			Input: `/cron add 0 30 9 * * 0 "Input Text"`,
-			Output: &JobCommand{Command:"add", Schedule:"0 30 9 * * 0", Text:"Input Text"},
+			Output: &JobCommand{ID: TestJobID, Command:"add", Schedule:"0 30 9 * * 0", Text:"Input Text"},
 			Error: nil,
 		},
 	}{
