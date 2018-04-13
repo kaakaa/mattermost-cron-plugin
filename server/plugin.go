@@ -53,7 +53,12 @@ func (p *CronPlugin) ExecuteCommand(args *model.CommandArgs) (*model.CommandResp
 		ChannelId: args.ChannelId, 
 		Message: jc.Text,
 	}
-	p.cron.AddFunc(jc.Schedule, func(){ p.api.CreatePost(&post)})
+	if err = p.cron.AddFunc(jc.Schedule, func(){ p.api.CreatePost(&post)}); err != nil {
+		return &model.CommandResponse {
+			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+			Text: fmt.Sprintf("Adding cron job is failed: %v", err),
+		}, nil
+	}
 	return &model.CommandResponse{
 		ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 		Text: fmt.Sprintf("%s cron job successfully", "test"),
