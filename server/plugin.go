@@ -113,7 +113,7 @@ type JobCommand struct {
 }
 
 func (jc *JobCommand) toMdTable() string {
-	return fmt.Sprintf("|%s|%s|%s|%s|%s|", 
+	return fmt.Sprintf("|%s|%s|%s|`%s`|`%s`|", 
 		jc.ID,
 		jc.UserID,
 		jc.ChannelID,
