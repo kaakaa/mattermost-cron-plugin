@@ -128,8 +128,8 @@ type JobCommandList struct {
 
 func (l *JobCommandList) toMdTable() string {
 	var result []string
-	result = append(result, "| id |user_id|channel_id|schedule|text|")
-	result = append(result, "|:--:|:-----:|:--------:|:------:|:--:|")
+	result = append(result, "|job_id|user_id|channel_id|schedule|text|")
+	result = append(result, "|:----:|:-----:|:--------:|:------:|:--:|")
 	for _, jc := range l.JobCommands {
 		result = append(result, jc.toMdTable())
 	}
