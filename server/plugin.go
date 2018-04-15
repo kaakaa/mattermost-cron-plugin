@@ -4,7 +4,6 @@ import (
 	"encoding/gob"
 	"bytes"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/mattermost/mattermost-server/model"
@@ -14,7 +13,10 @@ import (
 )
 
 var Generator IDGenerator = &RandomGenerator{}
-const JobIDListKey = "CRON_JOB_LIST"
+const (
+	TriggerWord = "cron"
+	JobIDListKey = "CRON_JOB_LIST"
+)
 
 type CronPlugin struct{
 	api		plugin.API
@@ -39,7 +41,7 @@ func (p *CronPlugin) OnActivate(api plugin.API) error {
 	p.keyValue = p.api.KeyValueStore()
 	// p.keyValue.Delete(JobIDListKey)
 	return p.api.RegisterCommand(&model.Command{
-		Trigger:	`cron`,
+		Trigger:	TriggerWord,
 		AutoComplete: true,
 		AutoCompleteDesc: `Manage cron jobs`,
 		AutoCompleteHint: `add/remove/list¥nnewline`,
@@ -61,46 +63,6 @@ func (p *CronPlugin) ExecuteCommand(args *model.CommandArgs) (*model.CommandResp
 		}, nil
 	}
 	return jc.execute(p)
-}
-
-func parseCommand(args *model.CommandArgs) (ControlJobCommand, error) {
-	s, err := parseText(args.Command)
-	if err != nil {
-		return nil, err
-	}
-
-	jc := &JobCommand{
-		ID: Generator.getID(),
-		UserID: args.UserId,
-		ChannelID: args.ChannelId,
-		Schedule: s[2],
-		Text: s[3],	
-	}
-	switch s[1] {
-	case "add":
-		return AddJobCommand{
-			jc: jc,
-		}, nil
-	case "rm":
-		// To be implemented
-	case "list":
-		return ListJobCommand{
-			jc: jc,
-		}, nil
-	}
-	return nil, fmt.Errorf("Invalid command")
-}
-
-func parseText(text string) ([]string, error) {
-	// TODO: Should we reject jobs per seconds becauseof its heavy resource
-	// https://godoc.org/github.com/robfig/cron#Parser
-	re := regexp.MustCompile(`/cron (add|list) ([^"¥s]+) "(.+)"`)
-	if !re.MatchString(text) {
-		return []string{}, fmt.Errorf("Cannot parse command text: %s", text)
-	}
-	s :=  re.FindAllStringSubmatch(text, -1)[0]
-
-	return s, nil
 }
 
 // TODO: Add reated_id fields
@@ -190,10 +152,7 @@ func (c AddJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model.Ap
 	}, nil
 }
 
-
-type ListJobCommand struct {
-	jc *JobCommand
-}
+type ListJobCommand struct {}
 
 func (c ListJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model.AppError) {
 	idList, err := p.readJobIDList()
@@ -230,6 +189,50 @@ func (c ListJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model.A
 			},
 		},
 	}, nil
+}
+
+type RemoveJobCommand struct {
+	ids []string
+}
+
+func (c RemoveJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model.AppError) {
+	for _, id := range c.ids {
+		if appErr := p.keyValue.Delete(id); appErr != nil {
+			return &model.CommandResponse {
+				ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+				Text: fmt.Sprintf("Removeing cron job is failed: %v", appErr),
+			}, nil
+		}
+	}
+
+	idList, err := p.readJobIDList()
+	if err != nil {
+		return &model.CommandResponse {
+			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+			Text: fmt.Sprintf("Reading cron job id list is failed: %v", err),
+		}, nil
+	}
+	newList := JobIDList{}
+	for _, id := range idList {
+		for _, target := range c.ids {
+			if id != target {
+				newList = append(newList, id)
+			}
+		}
+	}
+	buffer := &bytes.Buffer{}
+	gob.NewEncoder(buffer).Encode(newList)
+	if appErr := p.keyValue.Set(JobIDListKey, buffer.Bytes()); appErr != nil {
+		return &model.CommandResponse {
+			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+			Text: fmt.Sprintf("Storing cron job id is failed: %v", appErr.DetailedError),
+		}, nil		
+	}
+	return &model.CommandResponse{
+		ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+		Text: fmt.Sprintf("Removing %s cron job is successfully", c.ids),
+	}, nil
+
 }
 
 func (p *CronPlugin) readJobIDList() (JobIDList, error) {
