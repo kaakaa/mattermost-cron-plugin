@@ -21,16 +21,19 @@ func parseCommand(args *model.CommandArgs) (ControlJobCommand, error) {
 	case "add":
 		re := regexp.MustCompile(`([^"¥s]+) "(.+)"`)
 		if !re.MatchString(commands[1]) {
-			return nil, fmt.Errorf("Cannot parse command text: %s", text)
+			return nil, fmt.Errorf("Cannot parse add command text: `%s`", text)
 		}
-		s :=  re.FindAllStringSubmatch(text, -1)[0]
+		s :=  re.FindAllStringSubmatch(commands[1], -1)[0]
+		if len(s) != 3 {
+			return nil, fmt.Errorf("Parsing add command error: `%v`", text)
+		}
 		return AddJobCommand{
 			jc: &JobCommand{
 				ID: Generator.getID(),
 				UserID: args.UserId,
 				ChannelID: args.ChannelId,
-				Schedule: s[2],
-				Text: s[3],	
+				Schedule: s[1],
+				Text: s[2],
 			},
 		}, nil
 	case "rm":

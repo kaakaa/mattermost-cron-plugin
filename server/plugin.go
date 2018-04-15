@@ -228,11 +228,49 @@ func (c RemoveJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model
 			Text: fmt.Sprintf("Storing cron job id is failed: %v", appErr.DetailedError),
 		}, nil		
 	}
+
+	newCron := cron.New()
+	errs := []string{}
+	for _, id := range newList {
+		b, appErr := p.keyValue.Get(id)
+		if appErr != nil {
+			errs = append(errs, fmt.Sprintf(`* %s: cannnot get value: %v`, id, appErr.DetailedError))
+			continue
+		}
+		var jc JobCommand
+		if err = gob.NewDecoder(bytes.NewBuffer(b)).Decode(&jc); err != nil {
+			errs = append(errs, fmt.Sprintf("* %s: decoding job command is failed: %v", id, err))
+			continue
+		}
+
+		post := model.Post{
+			UserId: jc.UserID,
+			ChannelId: jc.ChannelID,
+			Message: jc.Text,
+		}
+		if err = newCron.AddFunc(jc.Schedule, func(){ p.api.CreatePost(&post)}); err != nil {
+			errs = append(errs, fmt.Sprintf("* %s: adding cron job is failed: %v", err))
+			continue
+		}
+	}
+
+	oldCron := p.cron
+	p.cron = newCron
+	p.cron.Start()
+	oldCron.Stop()
+
+	var message string
+	if len(errs) == 0 {
+		message = fmt.Sprintf("Removing %s cron job is successfully.", c.ids)
+	} else {
+		message = fmt.Sprintf("Removing %s cron job is successfully.\n\nThe following jobs cannnot be started.\n%s", c.ids, strings.Join(errs, "\n"))
+	}
+
 	return &model.CommandResponse{
 		ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
-		Text: fmt.Sprintf("Removing %s cron job is successfully", c.ids),
+		Text: message,
 	}, nil
-
+	
 }
 
 func (p *CronPlugin) readJobIDList() (JobIDList, error) {
