@@ -40,12 +40,20 @@ func (p *CronPlugin) OnActivate(api plugin.API) error {
 	p.api = api
 	p.keyValue = p.api.KeyValueStore()
 	// p.keyValue.Delete(JobIDListKey)
-	return p.api.RegisterCommand(&model.Command{
+	if err :=  p.api.RegisterCommand(&model.Command{
 		Trigger:	TriggerWord,
 		AutoComplete: true,
 		AutoCompleteDesc: `Manage cron jobs`,
 		AutoCompleteHint: `add/remove/list¥nnewline`,
-	})
+	}); err != nil {
+		return err
+	}
+
+	idList, err := p.readJobIDList()
+	if err != nil {
+		return fmt.Errorf("Cannnot read cron id list.")
+	}
+	return p.loadAllJobs(idList)
 }
 
 func (p *CronPlugin) OnDeactivate() error {
@@ -287,6 +295,44 @@ func (p *CronPlugin) readJobIDList() (JobIDList, error) {
 	return idList, nil
 }
 
+func (p *CronPlugin) loadAllJobs(idList []string)  error {
+	newCron := cron.New()
+	errs := []string{}
+	for _, id := range idList {
+		b, appErr := p.keyValue.Get(id)
+		if appErr != nil {
+			errs = append(errs, fmt.Sprintf(`* %s: cannnot get value: %v`, id, appErr.DetailedError))
+			continue
+		}
+		var jc JobCommand
+		if err := gob.NewDecoder(bytes.NewBuffer(b)).Decode(&jc); err != nil {
+			errs = append(errs, fmt.Sprintf("* %s: decoding job command is failed: %v", id, err))
+			continue
+		}
+
+		post := model.Post{
+			UserId: jc.UserID,
+			ChannelId: jc.ChannelID,
+			Message: jc.Text,
+		}
+		if err := newCron.AddFunc(jc.Schedule, func(){ p.api.CreatePost(&post)}); err != nil {
+			errs = append(errs, fmt.Sprintf("* %s: adding cron job is failed: %v", err))
+			continue
+		}
+	}
+	if p.cron != nil {
+		p.cron.Stop()
+	}
+	p.cron = newCron
+	p.cron.Start()
+	
+	if len(errs) == 0 {
+		return nil
+	} else {
+		return fmt.Errorf("The following jobs cannot loads: %s", strings.Join(errs, "\n"))
+	}
+}
+ 
 func main() {
 	rpcplugin.Main(&CronPlugin{})
 }
