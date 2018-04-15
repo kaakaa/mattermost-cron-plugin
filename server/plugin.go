@@ -164,6 +164,13 @@ type ListJobCommand struct {}
 
 func (c ListJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model.AppError) {
 	idList, err := p.readJobIDList()
+	if len(idList) == 0 {
+		return &model.CommandResponse{
+			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+			Text: fmt.Sprintf("There are no cron jobs."),
+		}, nil
+	}
+
 	if err != nil {
 		return &model.CommandResponse {
 			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
