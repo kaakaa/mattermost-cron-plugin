@@ -1,5 +1,5 @@
-id: mattermost-cron
-name: mattermost-cron
-version: '0.1'
+id: Mattercron
+name: mattermost-cron-plugin
+version: '0.0.1'
 backend: 
   executable: plugin

@@ -1,0 +1,25 @@
+sudo: false
+
+language: go
+go:
+- "1.10"
+- tip
+
+install:
+- go get github.com/go-task/task/cmd/task
+
+script:
+- task lint
+- task test-coverage
+
+after_success:
+- bash <(curl -s https://codecov.io/bash)
+
+deploy:
+  provider: releases
+  api_key:
+    secure: AFpS4NB87moL1jf/Q+zbD0WkmqtafvGTOctLzoV33Ktnc13/9hhoO3euTC5u+v1yZPQCnpXnoBUMPYljQrf5DaPjYTTrII/kk7vTbz9VlTmCcpj6kTzF/0GjEaCy4WqJkSpnvs/TBkN4qg7KNoTz3m5cIjRPLpNHT9W6OBdnf3zYK01Ln6ddwX+oJ60liHgcmKFsvPc3FBKSCRYawhswvB/L1ABM+SBQ20yFNdsgVVXxSg+1+RdRf9EDpiV/u0dM+voXWFjhmgj3OXzkEGA0jott2pmd7ME6bPqv+90PpQujEgm7BjpVl4UraT2NyO0Q4MZ2F7s09lH8riMsq4eKpqS8qQaYUGleKXALyob2jmkhq2bI4lCBDbycdJI3qe5pUJHx2L6aB9+FYL1dNEHimyPfBFMUpIgOvihE2OKahQE+wPHUOOGV07YAkaMCB8I0vgZA1gVP/XBeReyBxvYdkgEHQMI8Ck8z3zQSWpaoGDDqnnioI5c6Q4cZbDiMTqBvV2EdhFrSr3GtEPXNBLdcH/A35Jruht2R6d7D2fldbxA2VIjoc79l05NZcEf9sgjl8XFNUuFK6LUmAjYhBjWngyJtBwsUuGaOM5+8ZXi+Hh9M/SXWpWMctrHg+1i/rsjSxrFUn07wpJM9K7bEyukBBl9CkuerszYSuExHhOSY2vY=
+  file: dist/*
+  on:
+    tags: true
+    repo: kaakaa/mattermost-cron-plugin
