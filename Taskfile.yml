@@ -8,7 +8,7 @@ dl-deps:
 update-deps:
   cmds:
     - dep ensure
-    - dep eusure -update
+    - dep ensure -update
 
 lint:
   cmds:
