@@ -10,7 +10,7 @@ type IDGenerator interface {
 	getID() string
 }
 
-type RandomGenerator struct {}
+type RandomGenerator struct{}
 
 func (g *RandomGenerator) getID() string {
 	var n uint64
