@@ -6,11 +6,10 @@ import (
 	"strings"
 
 	"github.com/mattermost/mattermost-server/model"
-
 )
 
 func parseCommand(args *model.CommandArgs) (ControlJobCommand, error) {
-	// TODO: Should we reject jobs per seconds becauseof its heavy resource
+	// TODO: Should we reject jobs per seconds becauseof its heavy resource needed
 	// https://godoc.org/github.com/robfig/cron#Parser
 	text := args.Command
 	text = strings.Trim(text, " ")
@@ -23,22 +22,31 @@ func parseCommand(args *model.CommandArgs) (ControlJobCommand, error) {
 		if !re.MatchString(commands[1]) {
 			return nil, fmt.Errorf("Cannot parse add command text: `%s`", text)
 		}
-		s :=  re.FindAllStringSubmatch(commands[1], -1)[0]
+		s := re.FindAllStringSubmatch(commands[1], -1)[0]
 		if len(s) != 3 {
 			return nil, fmt.Errorf("Parsing add command error: `%v`", text)
 		}
 		return AddJobCommand{
 			jc: &JobCommand{
-				ID: Generator.getID(),
-				UserID: args.UserId,
+				ID:        Generator.getID(),
+				UserID:    args.UserId,
 				ChannelID: args.ChannelId,
-				Schedule: s[1],
-				Text: s[2],
+				Schedule:  s[1],
+				Text:      s[2],
 			},
 		}, nil
 	case "rm":
+		ids := JobIDList{}
+		for _, v := range strings.Split(commands[1], " ") {
+			if len(v) > 0 {
+				ids = append(ids, v)
+			}
+		}
+		if len(ids) == 0 {
+			return nil, fmt.Errorf("Neet to specify id(s) to remove.")
+		}
 		return RemoveJobCommand{
-			ids: strings.Split(commands[1], " "),
+			ids: ids,
 		}, nil
 	case "list":
 		return ListJobCommand{}, nil
@@ -47,7 +55,7 @@ func parseCommand(args *model.CommandArgs) (ControlJobCommand, error) {
 }
 
 func removeTriggerWord(text string) string {
-	return strings.Trim(text[len(`/` + TriggerWord):], " 　")
+	return strings.Trim(text[len(`/`+TriggerWord):], " 　")
 }
 
 func parseSubcommand(text string) []string {

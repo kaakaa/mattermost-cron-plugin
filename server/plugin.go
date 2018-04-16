@@ -39,7 +39,6 @@ func (p *CronPlugin) OnActivate(api plugin.API) error {
 
 	p.api = api
 	p.keyValue = p.api.KeyValueStore()
-	// p.keyValue.Delete(JobIDListKey)
 	if err :=  p.api.RegisterCommand(&model.Command{
 		Trigger:	TriggerWord,
 		AutoComplete: true,
@@ -264,7 +263,7 @@ func (c RemoveJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model
 			Message: jc.Text,
 		}
 		if err = newCron.AddFunc(jc.Schedule, func(){ p.api.CreatePost(&post)}); err != nil {
-			errs = append(errs, fmt.Sprintf("* %s: adding cron job is failed: %v", err))
+			errs = append(errs, fmt.Sprintf("* %s: adding cron job is failed: %v", id, err))
 			continue
 		}
 	}
@@ -323,7 +322,7 @@ func (p *CronPlugin) loadAllJobs(idList []string)  error {
 			Message: jc.Text,
 		}
 		if err := newCron.AddFunc(jc.Schedule, func(){ p.api.CreatePost(&post)}); err != nil {
-			errs = append(errs, fmt.Sprintf("* %s: adding cron job is failed: %v", err))
+			errs = append(errs, fmt.Sprintf("* %s: adding cron job is failed: %v", id, err))
 			continue
 		}
 	}

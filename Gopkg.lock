@@ -27,8 +27,8 @@
     "plugin/rpcplugin",
     "utils/markdown"
   ]
-  revision = "6dc9fa885dfd5448fb6910bfb0cb4f1179139ff8"
-  version = "v4.8.1"
+  revision = "3176e13b1f9b14192bef2337ff3fb9346f26ef66"
+  version = "v4.9.0"
 
 [[projects]]
   name = "github.com/nicksnyder/go-i18n"
