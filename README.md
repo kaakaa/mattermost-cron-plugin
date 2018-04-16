@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/kaakaa/mattermost-cron-plugin.svg?branch=master)](https://travis-ci.org/kaakaa/mattermost-cron-plugin)
 # (Beta) Mattermost Cron Plugin
 
 Mattermost plugin for scheduling echo task.
