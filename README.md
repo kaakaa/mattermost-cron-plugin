@@ -1,4 +1,6 @@
 [![Build Status](https://travis-ci.org/kaakaa/mattermost-cron-plugin.svg?branch=master)](https://travis-ci.org/kaakaa/mattermost-cron-plugin)
+[![codecov](https://codecov.io/gh/kaakaa/mattermost-cron-plugin/branch/master/graph/badge.svg)](https://codecov.io/gh/kaakaa/mattermost-cron-plugin)
+
 # (Beta) Mattermost Cron Plugin
 
 Mattermost plugin for scheduling echo task.
