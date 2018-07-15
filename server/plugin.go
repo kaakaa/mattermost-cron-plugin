@@ -8,7 +8,6 @@ import (
 
 	"github.com/mattermost/mattermost-server/model"
 	"github.com/mattermost/mattermost-server/plugin"
-	"github.com/mattermost/mattermost-server/plugin/rpcplugin"
 	"github.com/robfig/cron"
 )
 
@@ -20,37 +19,37 @@ const (
 )
 
 type CronPlugin struct {
-	api      plugin.API
-	cron     *cron.Cron
-	keyValue plugin.KeyValueStore
+	plugin.MattermostPlugin
+	cron *cron.Cron
 }
 type JobIDList []string
 
 // Now, github.com/robfig/cron has no way how to remove cron job (2018/04/04)
 // So If we need remove cron job, we have to remove job from key-store and restart(cron.Stop, cron.Start) cron.
 // refs: https://github.com/robfig/cron/issues/124
-func (p *CronPlugin) OnActivate(api plugin.API) error {
-	c := cron.New()
-	p.cron = c
-	// TODO: Read cron settings from key-value, and add func here
-	p.cron.Start()
-
-	p.api = api
-	p.keyValue = p.api.KeyValueStore()
-	if err := p.api.RegisterCommand(&model.Command{
+func (p *CronPlugin) OnActivate() error {
+	p.API.LogInfo("Activating mattermost-cron-plugin...")
+	if err := p.API.RegisterCommand(&model.Command{
 		Trigger:          TriggerWord,
 		AutoComplete:     true,
 		AutoCompleteDesc: `Manage cron jobs`,
 		AutoCompleteHint: `add/remove/list¥nnewline`,
 	}); err != nil {
+		p.API.LogError(fmt.Sprintf("CRON: Activating Error: %v", err))
 		return err
 	}
 
 	idList, err := p.readJobIDList()
 	if err != nil {
+		p.API.LogError(fmt.Sprintf("CRON: Activating Error: %v", err))
 		return fmt.Errorf("Cannnot read cron id list.")
 	}
-	return p.loadAllJobs(idList)
+	if err := p.loadAllJobs(idList); err != nil {
+		p.API.LogError(fmt.Sprintf("CRON: Activating Error: %v", err))
+		return err
+	}
+	p.API.LogInfo("CRON: Complete activating!")
+	return nil
 }
 
 func (p *CronPlugin) OnDeactivate() error {
@@ -59,7 +58,8 @@ func (p *CronPlugin) OnDeactivate() error {
 }
 
 // /cron add * * * * * * Test
-func (p *CronPlugin) ExecuteCommand(args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
+func (p *CronPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
+	p.API.LogInfo("CRON: Executing")
 	jc, err := parseCommand(args)
 	if err != nil {
 		return &model.CommandResponse{
@@ -104,7 +104,7 @@ func (l *JobCommandList) toMdTable() string {
 }
 
 func (p *CronPlugin) readJobIDList() (JobIDList, error) {
-	b, appErr := p.keyValue.Get(JobIDListKey)
+	b, appErr := p.API.KVGet(JobIDListKey)
 	if appErr != nil {
 		return JobIDList{}, fmt.Errorf("Getting cron job id list is failed: %v", appErr.DetailedError)
 	}
@@ -121,7 +121,7 @@ func (p *CronPlugin) loadAllJobs(idList []string) error {
 	newCron := cron.New()
 	errs := []string{}
 	for _, id := range idList {
-		b, appErr := p.keyValue.Get(id)
+		b, appErr := p.API.KVGet(id)
 		if appErr != nil {
 			errs = append(errs, fmt.Sprintf(`* %s: cannnot get value: %v`, id, appErr.DetailedError))
 			continue
@@ -137,7 +137,7 @@ func (p *CronPlugin) loadAllJobs(idList []string) error {
 			ChannelId: jc.ChannelID,
 			Message:   jc.Text,
 		}
-		if err := newCron.AddFunc(jc.Schedule, func() { p.api.CreatePost(&post) }); err != nil {
+		if err := newCron.AddFunc(jc.Schedule, func() { p.API.CreatePost(&post) }); err != nil {
 			errs = append(errs, fmt.Sprintf("* %s: adding cron job is failed: %v", id, err))
 			continue
 		}
@@ -145,10 +145,10 @@ func (p *CronPlugin) loadAllJobs(idList []string) error {
 	if p.cron != nil {
 		p.cron.Stop()
 	}
-	p.cron = newCron
-	p.cron.Start()
 
 	if len(errs) == 0 {
+		p.cron = newCron
+		p.cron.Start()
 		return nil
 	} else {
 		return fmt.Errorf("The following jobs cannot loads: %s", strings.Join(errs, "\n"))
@@ -156,5 +156,5 @@ func (p *CronPlugin) loadAllJobs(idList []string) error {
 }
 
 func main() {
-	rpcplugin.Main(&CronPlugin{})
+	plugin.ClientMain(&CronPlugin{})
 }

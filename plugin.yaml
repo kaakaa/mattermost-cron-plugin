@@ -1,4 +1,4 @@
-id: Mattercron
+id: mattercron
 name: mattermost-cron-plugin
 version: '0.0.1'
 backend: 

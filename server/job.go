@@ -35,7 +35,7 @@ func (c AddJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model.Ap
 
 	buffer := &bytes.Buffer{}
 	gob.NewEncoder(buffer).Encode(idList)
-	if appErr := p.keyValue.Set(JobIDListKey, buffer.Bytes()); appErr != nil {
+	if appErr := p.API.KVSet(JobIDListKey, buffer.Bytes()); appErr != nil {
 		return &model.CommandResponse{
 			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 			Text:         fmt.Sprintf("Storing cron job id is failed: %v", appErr.DetailedError),
@@ -44,7 +44,7 @@ func (c AddJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model.Ap
 
 	buffer = &bytes.Buffer{}
 	gob.NewEncoder(buffer).Encode(c.jc)
-	if appErr := p.keyValue.Set(c.jc.ID, buffer.Bytes()); appErr != nil {
+	if appErr := p.API.KVSet(c.jc.ID, buffer.Bytes()); appErr != nil {
 		return &model.CommandResponse{
 			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 			Text:         fmt.Sprintf("Storing cron job is failed: %v", appErr.DetailedError),
@@ -56,7 +56,7 @@ func (c AddJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model.Ap
 		ChannelId: c.jc.ChannelID,
 		Message:   c.jc.Text,
 	}
-	if err := p.cron.AddFunc(c.jc.Schedule, func() { p.api.CreatePost(&post) }); err != nil {
+	if err := p.cron.AddFunc(c.jc.Schedule, func() { p.API.CreatePost(&post) }); err != nil {
 		return &model.CommandResponse{
 			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 			Text:         fmt.Sprintf("Adding cron job is failed: %v", err),
@@ -87,7 +87,7 @@ func (c ListJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model.A
 	list := &JobCommandList{}
 	list.JobCommands = []JobCommand{}
 	for _, id := range idList {
-		b, err := p.keyValue.Get(id)
+		b, err := p.API.KVGet(id)
 		if err != nil {
 			errs = append(errs, fmt.Sprintf("* %s:%v", id, err))
 			// TODO: logging error
@@ -114,7 +114,7 @@ func (c ListJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model.A
 
 func (c RemoveJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model.AppError) {
 	for _, id := range c.ids {
-		if appErr := p.keyValue.Delete(id); appErr != nil {
+		if appErr := p.API.KVDelete(id); appErr != nil {
 			return &model.CommandResponse{
 				ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 				Text:         fmt.Sprintf("Removeing cron job is failed: %v", appErr),
@@ -139,7 +139,7 @@ func (c RemoveJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model
 	}
 	buffer := &bytes.Buffer{}
 	gob.NewEncoder(buffer).Encode(newList)
-	if appErr := p.keyValue.Set(JobIDListKey, buffer.Bytes()); appErr != nil {
+	if appErr := p.API.KVSet(JobIDListKey, buffer.Bytes()); appErr != nil {
 		return &model.CommandResponse{
 			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 			Text:         fmt.Sprintf("Storing cron job id is failed: %v", appErr.DetailedError),
@@ -149,7 +149,7 @@ func (c RemoveJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model
 	newCron := cron.New()
 	errs := []string{}
 	for _, id := range newList {
-		b, appErr := p.keyValue.Get(id)
+		b, appErr := p.API.KVGet(id)
 		if appErr != nil {
 			errs = append(errs, fmt.Sprintf(`* %s: cannnot get value: %v`, id, appErr.DetailedError))
 			continue
@@ -165,7 +165,7 @@ func (c RemoveJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model
 			ChannelId: jc.ChannelID,
 			Message:   jc.Text,
 		}
-		if err = newCron.AddFunc(jc.Schedule, func() { p.api.CreatePost(&post) }); err != nil {
+		if err = newCron.AddFunc(jc.Schedule, func() { p.API.CreatePost(&post) }); err != nil {
 			errs = append(errs, fmt.Sprintf("* %s: adding cron job is failed: %v", id, err))
 			continue
 		}
