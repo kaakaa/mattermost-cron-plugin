@@ -31,6 +31,14 @@ func (c AddJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model.Ap
 			Text:         fmt.Sprintf("Reading cron job id list is failed: %v", err),
 		}, nil
 	}
+	// If the number of jobs exeeds 10, you can't add no more job
+	if len(idList) >= 10 {
+		return &model.CommandResponse{
+			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+			Text:         fmt.Sprintf("Since the number of registered jobs is 10, You can't register more job. Please remove a job, and try again."),
+		}, nil
+	}
+
 	idList = append(idList, c.jc.ID)
 
 	buffer := &bytes.Buffer{}
