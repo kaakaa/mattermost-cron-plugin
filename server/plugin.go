@@ -33,33 +33,36 @@ func (p *CronPlugin) OnActivate() error {
 		Trigger:          TriggerWord,
 		AutoComplete:     true,
 		AutoCompleteDesc: `Manage cron jobs`,
-		AutoCompleteHint: `add/remove/list¥nnewline`,
+		AutoCompleteHint: `add / rm / list`,
 	}); err != nil {
-		p.API.LogError(fmt.Sprintf("CRON: Activating Error: %v", err))
+		p.API.LogError(fmt.Sprintf("Activating Error: %v", err))
 		return err
 	}
 
 	idList, err := p.readJobIDList()
 	if err != nil {
-		p.API.LogError(fmt.Sprintf("CRON: Activating Error: %v", err))
+		p.API.LogError(fmt.Sprintf("Activating Error: %v", err))
 		return fmt.Errorf("Cannnot read cron id list.")
 	}
+	p.API.LogInfo(fmt.Sprintf("Read jobs count: %d", len(idList)))
+	p.API.LogDebug(fmt.Sprintf("Job IDs: %v", idList))
 	if err := p.loadAllJobs(idList); err != nil {
-		p.API.LogError(fmt.Sprintf("CRON: Activating Error: %v", err))
+		p.API.LogError(fmt.Sprintf("Activating Error: %v", err))
 		return err
 	}
-	p.API.LogInfo("CRON: Complete activating!")
+	p.API.LogInfo("Complete activating!")
 	return nil
 }
 
 func (p *CronPlugin) OnDeactivate() error {
 	p.cron.Stop()
+	p.API.LogInfo("Complete deactivating!")
 	return nil
 }
 
 // /cron add * * * * * * Test
 func (p *CronPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
-	p.API.LogInfo("CRON: Executing")
+	p.API.LogInfo(fmt.Sprintf("Executing: %v", args))
 	jc, err := parseCommand(args)
 	if err != nil {
 		return &model.CommandResponse{
@@ -67,6 +70,7 @@ func (p *CronPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) 
 			Text:         fmt.Sprintf("Cannot control cron job: %v", err),
 		}, nil
 	}
+	p.API.LogDebug(fmt.Sprintf("Parsed command: %v", jc))
 	return jc.execute(p)
 }
 
@@ -123,12 +127,12 @@ func (p *CronPlugin) loadAllJobs(idList []string) error {
 	for _, id := range idList {
 		b, appErr := p.API.KVGet(id)
 		if appErr != nil {
-			errs = append(errs, fmt.Sprintf(`* %s: cannnot get value: %v`, id, appErr.DetailedError))
+			p.API.LogInfo(fmt.Sprintf(`ID:%s: cannnot get value: %v`, id, appErr.DetailedError))
 			continue
 		}
 		var jc JobCommand
 		if err := gob.NewDecoder(bytes.NewBuffer(b)).Decode(&jc); err != nil {
-			errs = append(errs, fmt.Sprintf("* %s: decoding job command is failed: %v", id, err))
+			p.API.LogInfo(fmt.Sprintf("ID:%s: decoding job command is failed: %v", id, err))
 			continue
 		}
 
@@ -138,7 +142,7 @@ func (p *CronPlugin) loadAllJobs(idList []string) error {
 			Message:   jc.Text,
 		}
 		if err := newCron.AddFunc(jc.Schedule, func() { p.API.CreatePost(&post) }); err != nil {
-			errs = append(errs, fmt.Sprintf("* %s: adding cron job is failed: %v", id, err))
+			p.API.LogInfo(fmt.Sprintf("ID:%s: adding cron job is failed: %v", id, err))
 			continue
 		}
 	}
@@ -149,6 +153,7 @@ func (p *CronPlugin) loadAllJobs(idList []string) error {
 	if len(errs) == 0 {
 		p.cron = newCron
 		p.cron.Start()
+		p.API.LogDebug("Starting cron process.")
 		return nil
 	} else {
 		return fmt.Errorf("The following jobs cannot loads: %s", strings.Join(errs, "\n"))
