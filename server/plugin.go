@@ -63,7 +63,6 @@ func (p *CronPlugin) OnDeactivate() error {
 	return nil
 }
 
-// /cron add * * * * * * Test
 func (p *CronPlugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
 	p.API.LogInfo(fmt.Sprintf("Executing: %v", args))
 	jc, err := parseCommand(args)
