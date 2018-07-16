@@ -179,10 +179,9 @@ func (c RemoveJobCommand) execute(p *CronPlugin) (*model.CommandResponse, *model
 		}
 	}
 
-	oldCron := p.cron
+	p.cron.Stop()
 	p.cron = newCron
 	p.cron.Start()
-	oldCron.Stop()
 
 	var message string
 	if len(errs) == 0 {
