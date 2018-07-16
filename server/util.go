@@ -43,7 +43,7 @@ func parseCommand(args *model.CommandArgs) (ControlJobCommand, error) {
 			}
 		}
 		if len(ids) == 0 {
-			return nil, fmt.Errorf("Neet to specify id(s) to remove.")
+			return nil, fmt.Errorf("Need to specify id(s) to remove.")
 		}
 		return RemoveJobCommand{
 			ids: ids,
