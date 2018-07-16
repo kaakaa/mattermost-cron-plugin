@@ -56,6 +56,9 @@ func (p *CronPlugin) OnActivate() error {
 
 func (p *CronPlugin) OnDeactivate() error {
 	p.cron.Stop()
+	if err := p.API.UnregisterCommand("", TriggerWord); err != nil {
+		p.API.LogError(fmt.Sprintf("Cannot remove command on (empty) team"))
+	}
 	p.API.LogInfo("Complete deactivating!")
 	return nil
 }
