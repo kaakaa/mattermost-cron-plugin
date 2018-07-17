@@ -165,13 +165,6 @@ func (c RemoveJobCommand) Execute(api plugin.API, cron *cron.Cron) (*model.Comma
 		}, nil
 	}
 
-	if len(newList) == 0 {
-		return &model.CommandResponse{
-			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
-			Text:         fmt.Sprintf("Removing %s cron job is successfully.", c.IDs),
-		}, nil
-	}
-
 	newCron, err := RegistAllJobs(api, newList)
 	if cron != nil {
 		cron.Stop()
