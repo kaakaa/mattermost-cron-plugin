@@ -5,10 +5,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/kaakaa/mattermost-cron-plugin/server/cronjob"
 	"github.com/mattermost/mattermost-server/model"
 )
 
-func parseCommand(args *model.CommandArgs) (ControlJobCommand, error) {
+func parseCommand(args *model.CommandArgs) (cronjob.ControlJobCommand, error) {
 	// TODO: Should we reject jobs per seconds becauseof its heavy resource needed
 	// https://godoc.org/github.com/robfig/cron#Parser
 	text := args.Command
@@ -26,8 +27,8 @@ func parseCommand(args *model.CommandArgs) (ControlJobCommand, error) {
 		if len(s) != 3 {
 			return nil, fmt.Errorf("Parsing add command error: `%v`", text)
 		}
-		return AddJobCommand{
-			jc: &JobCommand{
+		return cronjob.AddJobCommand{
+			JobCommand: &cronjob.JobCommand{
 				ID:        Generator.getID(),
 				UserID:    args.UserId,
 				ChannelID: args.ChannelId,
@@ -36,7 +37,7 @@ func parseCommand(args *model.CommandArgs) (ControlJobCommand, error) {
 			},
 		}, nil
 	case "rm":
-		ids := JobIDList{}
+		ids := []string{}
 		for _, v := range strings.Split(commands[1], " ") {
 			if len(v) > 0 {
 				ids = append(ids, v)
@@ -45,11 +46,11 @@ func parseCommand(args *model.CommandArgs) (ControlJobCommand, error) {
 		if len(ids) == 0 {
 			return nil, fmt.Errorf("Need to specify id(s) to remove.")
 		}
-		return RemoveJobCommand{
-			ids: ids,
+		return cronjob.RemoveJobCommand{
+			IDs: ids,
 		}, nil
 	case "list":
-		return ListJobCommand{}, nil
+		return cronjob.ListJobCommand{}, nil
 	}
 	return nil, fmt.Errorf("Invalid command")
 }

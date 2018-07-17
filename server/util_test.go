@@ -6,6 +6,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/kaakaa/mattermost-cron-plugin/server/cronjob"
 	"github.com/mattermost/mattermost-server/model"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,7 +28,7 @@ func TestParseCommand(t *testing.T) {
 
 	for name, tc := range map[string]struct {
 		Input  *model.CommandArgs
-		Output ControlJobCommand
+		Output cronjob.ControlJobCommand
 		Error  error
 	}{
 		"Add cron job": {
@@ -36,8 +37,8 @@ func TestParseCommand(t *testing.T) {
 				ChannelId: TestChannelID,
 				Command:   `/cron add * * * * * * "Input Text"`,
 			},
-			Output: AddJobCommand{
-				jc: &JobCommand{
+			Output: cronjob.AddJobCommand{
+				JobCommand: &cronjob.JobCommand{
 					ID:        TestJobID,
 					UserID:    TestUserID,
 					ChannelID: TestChannelID,
@@ -53,8 +54,8 @@ func TestParseCommand(t *testing.T) {
 				ChannelId: TestChannelID,
 				Command:   `/cron add */5 * * * * * "Input Text"`,
 			},
-			Output: AddJobCommand{
-				jc: &JobCommand{
+			Output: cronjob.AddJobCommand{
+				JobCommand: &cronjob.JobCommand{
 					ID:        TestJobID,
 					UserID:    TestUserID,
 					ChannelID: TestChannelID,
@@ -70,8 +71,8 @@ func TestParseCommand(t *testing.T) {
 				ChannelId: TestChannelID,
 				Command:   `/cron add 0 30 9 * * 0 "Input Text"`,
 			},
-			Output: AddJobCommand{
-				jc: &JobCommand{
+			Output: cronjob.AddJobCommand{
+				JobCommand: &cronjob.JobCommand{
 					ID:        TestJobID,
 					UserID:    TestUserID,
 					ChannelID: TestChannelID,
@@ -85,22 +86,22 @@ func TestParseCommand(t *testing.T) {
 			Input: &model.CommandArgs{
 				Command: `/cron list`,
 			},
-			Output: ListJobCommand{},
+			Output: cronjob.ListJobCommand{},
 			Error:  nil,
 		},
 		"List cron job with arguments": {
 			Input: &model.CommandArgs{
 				Command: `/cron list unnecessary arguments`,
 			},
-			Output: ListJobCommand{},
+			Output: cronjob.ListJobCommand{},
 			Error:  nil,
 		},
 		"Remove cron job": {
 			Input: &model.CommandArgs{
 				Command: `/cron rm SAMPLE_ID`,
 			},
-			Output: RemoveJobCommand{
-				ids: JobIDList{"SAMPLE_ID"},
+			Output: cronjob.RemoveJobCommand{
+				IDs: []string{"SAMPLE_ID"},
 			},
 			Error: nil,
 		},
@@ -108,8 +109,8 @@ func TestParseCommand(t *testing.T) {
 			Input: &model.CommandArgs{
 				Command: `/cron rm SAMPLE_ID_1 SAMPLE_ID_2`,
 			},
-			Output: RemoveJobCommand{
-				ids: JobIDList{"SAMPLE_ID_1", "SAMPLE_ID_2"},
+			Output: cronjob.RemoveJobCommand{
+				IDs: []string{"SAMPLE_ID_1", "SAMPLE_ID_2"},
 			},
 			Error: nil,
 		},
