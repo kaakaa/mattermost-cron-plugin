@@ -168,6 +168,9 @@ func (c RemoveJobCommand) Execute(api plugin.API, cron *cron.Cron) (*model.Comma
 	newCron, err := RegistAllJobs(api, newList)
 	if cron != nil {
 		cron.Stop()
+		if e := cron.Entries(); len(e) != 0 {
+			api.LogWarn("Cron job may not be removed. You should restart mattermost-cron plugin.")
+		}
 	}
 	cron = newCron
 	cron.Start()
